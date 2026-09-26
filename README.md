@@ -1,157 +1,681 @@
 # Sejora
 
-Sejora is a personal finance intelligence platform designed as a portfolio-grade full-stack application. It is being built incrementally according to [`SEJORA_ARCHITECTURE.md`](./SEJORA_ARCHITECTURE.md).
+### AI-Powered Personal Finance Intelligence Platform
 
-## Current status
+Sejora is a full-stack personal finance application designed to help users track their money, understand spending patterns, plan ahead, and make better financial decisions.
 
-Sejora currently includes:
+It combines deterministic financial logic with AI-powered features such as receipt scanning and contextual financial insights.
 
-- React/Vite frontend with the calm Sejora visual language
-- Firebase email/password authentication with verified protected routes
-- UID-scoped Firestore transaction and monthly budget CRUD
-- Deterministic INR/paise transaction, budget, dashboard, and analytics calculations
-- Authenticated Dashboard and Analytics read models
-- Responsive Recharts spending and monthly trend visualizations
-- Deterministic spending insights, unusual-spending flags, and recurring-payment detection
-- Savings goals with UID-scoped CRUD and server-derived progress
-- Explainable Financial Health scoring and recurring-only Upcoming Cash Flow
-- Receipt scanning with server-side multimodal Gemini extraction and mandatory review
-- Deterministic six-month historical forecasting and server-side what-if simulations
+> **Note:** Sejora is a portfolio/educational application. It is not a banking system, payment processor, or financial-advice service. It does not connect to real bank accounts or execute financial transactions.
 
-Generic AI assistant behavior remains intentionally deferred to later phases. Phase 11 now provides a deliberately limited, read-only natural-language financial Q&A surface.
+---
 
-## Run locally
+## ✨ Features
 
-```bash
+### 💳 Transaction Management
+
+- Add, edit, and delete income and expense transactions
+- Categorize transactions
+- Track payment methods
+- View transaction history
+- Filter and sort financial records
+- Track income, expenses, and net balance
+
+### 📊 Analytics
+
+- Income and expense summaries
+- Spending patterns
+- Category-based analysis
+- Monthly comparisons
+- Financial metrics and trends
+- Interactive charts and visualizations
+
+### 💰 Budgets
+
+- Create and manage budgets
+- Track budget usage
+- Monitor remaining budget
+- Compare spending against planned limits
+- View budget-related financial metrics
+
+### 🎯 Savings Goals
+
+- Create savings goals
+- Track progress toward goals
+- Monitor contributions
+- View goal-related financial metrics
+
+### 🔄 Recurring Payments
+
+- Detect recurring expenses
+- Track upcoming recurring payments
+- View expected cash-flow items
+- Monitor recurring spending patterns
+
+### 🔮 Financial Forecasting
+
+Sejora provides deterministic financial forecasting based on the user's recorded financial history.
+
+Features include:
+
+- Future income projections
+- Future expense projections
+- Projected balances
+- Savings-rate analysis
+- Multiple forecast horizons
+- What-if simulations
+
+Forecasting does not use an LLM to calculate financial values.
+
+### 🧾 AI Receipt Scanner
+
+Upload a receipt and Sejora uses Google Gemini to extract structured information such as:
+
+- Merchant
+- Date
+- Total amount
+- Currency
+- Category
+- Payment method
+- Visible line items
+
+The extracted information is displayed for review before it can become a transaction.
+
+**Scanning a receipt does not automatically create a transaction.**
+
+### 🤖 AI Financial Insights
+
+Gemini is used selectively for tasks where natural-language reasoning adds value, including:
+
+- Explaining financial trends
+- Summarizing financial activity
+- Generating contextual financial insights
+- Answering supported natural-language finance questions
+- Explaining financial scenarios
+
+Core numerical calculations remain deterministic and are not delegated to the LLM.
+
+---
+
+## 🧠 Design Philosophy
+
+Sejora follows a simple product loop:
+
+**Track → Understand → Predict → Act**
+
+The application is designed as a finance product first and an AI-enhanced product second.
+
+Deterministic application logic handles important financial operations such as:
+
+- Balance calculations
+- Income and expense calculations
+- Budget usage
+- Savings calculations
+- Financial metrics
+- Forecast calculations
+- Recurring-payment detection
+- Data aggregation
+- Input validation
+
+AI is used where it provides additional value:
+
+- Receipt understanding
+- Natural-language explanations
+- Financial summaries
+- Contextual insights
+- Natural-language financial questions
+
+This separation keeps important numerical results predictable, testable, and explainable.
+
+---
+
+## 🏗️ Architecture
+
+```text
+                         ┌──────────────────────┐
+                         │      React App       │
+                         │ TypeScript + Vite    │
+                         │ Tailwind CSS         │
+                         └──────────┬───────────┘
+                                    │
+                              Firebase ID Token
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │     Express API      │
+                         │ Node.js + TypeScript │
+                         └──────────┬───────────┘
+                                    │
+                   ┌────────────────┼────────────────┐
+                   │                │                │
+                   ▼                ▼                ▼
+          ┌────────────────┐ ┌──────────────┐ ┌──────────────┐
+          │ Firebase Admin│ │   Finance    │ │    Gemini    │
+          │      SDK       │ │    Engine    │ │     API      │
+          └───────┬────────┘ └──────────────┘ └──────────────┘
+                  │
+                  ▼
+          ┌────────────────┐
+          │   Firestore    │
+          └────────────────┘
+```
+
+### Request Flow
+
+1. The user signs in through Firebase Authentication.
+2. Firebase provides an ID token to the client.
+3. The client sends the token with authenticated API requests.
+4. The Express server verifies the token using Firebase Admin SDK.
+5. Requests are validated before reaching application services.
+6. Financial services perform deterministic calculations.
+7. Firestore stores user-scoped financial data.
+8. Gemini is called server-side only for AI-dependent functionality.
+
+The browser never receives Firebase Admin credentials or the Gemini API key.
+
+---
+
+## 🔐 Authentication
+
+Sejora uses Firebase Authentication for user authentication.
+
+The authentication flow is:
+
+```text
+User
+ │
+ ▼
+Firebase Authentication
+ │
+ ▼
+Firebase ID Token
+ │
+ ▼
+React Client
+ │
+ ▼
+Authorization: Bearer <token>
+ │
+ ▼
+Express API
+ │
+ ▼
+Firebase Admin verifyIdToken()
+ │
+ ▼
+Authenticated Request
+```
+
+Protected API routes verify the Firebase ID token before accessing user-specific financial data.
+
+User data is scoped using the authenticated Firebase UID.
+
+---
+
+## 🗄️ Data Storage
+
+Sejora uses Cloud Firestore for persistent financial data.
+
+The application stores user-owned data such as:
+
+* Transactions
+* Budgets
+* Goals
+* Recurring payments
+* Other application-specific financial records
+
+The server verifies the authenticated user before accessing protected data.
+
+Direct client access to private Firestore collections is denied by Firestore Security Rules. Firebase Admin operations on the server bypass those rules, so the Express API verifies Firebase ID tokens and uses UID-scoped repository paths before accessing user data.
+
+---
+
+## 🧾 Receipt Scanning Architecture
+
+Receipt scanning follows this flow:
+
+```text
+Receipt Image
+      │
+      ▼
+Authenticated API Request
+      │
+      ▼
+Image Validation
+      │
+      ▼
+Gemini
+      │
+      ▼
+Structured Receipt Data
+      │
+      ▼
+Server Validation
+      │
+      ▼
+Normalization
+      │
+      ▼
+User Review
+      │
+      ▼
+User Confirmation
+      │
+      ▼
+Transaction Created
+```
+
+The server validates the uploaded image before sending it to Gemini.
+
+Gemini-generated information is treated as untrusted input.
+
+The server validates and normalizes the response before presenting the data to the user.
+
+The user must review and confirm the extracted information before it is added to the transaction ledger.
+
+---
+
+## 🤖 AI Architecture
+
+Sejora follows a bounded-AI approach.
+
+### Deterministic Layer
+
+The application itself handles:
+
+```text
+Transactions
+     ↓
+Financial Calculations
+     ↓
+Budgets
+     ↓
+Analytics
+     ↓
+Forecasts
+     ↓
+Financial Metrics
+```
+
+### AI Layer
+
+Gemini is used for tasks that benefit from multimodal or natural-language understanding:
+
+```text
+Receipt Image ────────► Gemini
+                            │
+                            ▼
+                    Structured Extraction
+                            │
+                            ▼
+                         Validation
+                            │
+                            ▼
+                         User Review
+```
+
+For financial explanations:
+
+```text
+Financial Context
+       │
+       ▼
+Deterministic Facts
+       │
+       ▼
+Gemini
+       │
+       ▼
+Natural-Language Explanation
+```
+
+The AI layer does not replace the application's core financial calculations.
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+
+* React
+* TypeScript
+* Vite
+* Tailwind CSS
+* React Router
+* Recharts
+* Lucide React
+
+### Backend
+
+* Node.js
+* Express
+* TypeScript
+* Zod
+
+### Database & Authentication
+
+* Firebase Authentication
+* Cloud Firestore
+* Firebase Admin SDK
+
+### AI
+
+* Google Gemini API
+
+### Testing
+
+* Vitest
+
+---
+
+## 📁 Project Structure
+
+```text
+sejora/
+│
+├── client/
+│   └── src/
+│       ├── app/
+│       ├── components/
+│       │
+│       ├── features/
+│       │   ├── ai-finance/
+│       │   ├── analytics/
+│       │   ├── auth/
+│       │   ├── budgets/
+│       │   ├── cash-flow/
+│       │   ├── dashboard/
+│       │   ├── forecast/
+│       │   ├── goals/
+│       │   ├── insights/
+│       │   ├── receipts/
+│       │   ├── recurring/
+│       │   └── transactions/
+│       │
+│       ├── lib/
+│       └── styles/
+│
+├── server/
+│   └── src/
+│       ├── ai-finance/
+│       ├── ai-insights/
+│       ├── analytics/
+│       ├── auth/
+│       ├── budgets/
+│       ├── forecast/
+│       ├── goals/
+│       ├── intelligence/
+│       ├── phase7/
+│       ├── receipts/
+│       ├── security/
+│       └── transactions/
+│
+├── shared/
+│   ├── budgets/
+│   ├── finance/
+│   ├── forecast/
+│   ├── goals/
+│   ├── schemas/
+│   └── types/
+│
+├── tests/
+│   ├── integration/
+│   └── unit/
+│
+├── docs/
+├── public/
+│
+├── firestore.rules
+├── firestore.indexes.json
+├── index.html
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+└── vite.config.ts
+```
+
+---
+
+## 🔑 Environment Variables
+
+Sejora uses separate client-side and server-side configuration.
+
+### Firebase Client Configuration
+
+These variables are used by the browser application:
+
+```env
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_APP_ID=
+```
+
+These values identify the Firebase project used by the frontend.
+
+They are not Firebase Admin credentials.
+
+### Server Configuration
+
+These values must remain server-side:
+
+```env
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
+GEMINI_API_KEY=
+```
+
+Optional runtime configuration:
+
+```env
+PORT=5000
+NODE_ENV=development
+```
+
+### Important
+
+Never commit:
+
+```text
+.env
+Firebase service-account JSON files
+Private keys
+Gemini API keys
+Other credentials
+```
+
+The repository includes `.env.example` containing variable names and placeholders.
+
+---
+
+## 🚀 Running Locally
+
+### Requirements
+
+- Node.js 24 and npm.
+- A Firebase project configured for Email/Password Authentication and Cloud Firestore.
+- A Gemini API key only if you plan to use receipt scanning or Gemini-backed AI features.
+
+### Clone and install
+
+```powershell
+git clone https://github.com/whilesejalcodes/sejora-personal-finance.git
+Set-Location .\sejora-personal-finance
 npm install
-npm run dev
+Copy-Item .env.example .env
+notepad .env
 ```
 
-The application listens on port `5000` and serves the Vite UI plus the Express API. Verify the service at `/api/health`.
+Fill in the Firebase web configuration and Firebase Admin service-account values described above. `GEMINI_API_KEY` is optional unless you use the AI features. Do not commit `.env` or a service-account JSON file.
 
-## Checks
+Vite reads the `VITE_FIREBASE_*` values during the build. The Node server does not load `.env` automatically; load the server variables into the PowerShell process before starting the server. The PowerShell loading instructions are in [Standalone Windows setup](docs/STANDALONE_LOCAL_SETUP.md).
+
+### Run the development server
+
+```powershell
+npx tsx server/src/index.ts
+```
+
+Open `http://localhost:5000`. The server uses its Vite middleware in this mode. The repository's `npm run dev` script instead builds the app and starts it in production mode; it is not a hot-reload command.
+
+### Build and run production
+
+```powershell
+npm run build
+npm start
+```
+
+`npm start` serves the built frontend and API from the same origin. The server listens on `PORT`, defaulting to `5000`. Run `npm test` for the test suite and `npm run typecheck` for client/server type checks.
+
+For exact Windows environment setup and Firebase configuration steps, see [Standalone Windows setup](docs/STANDALONE_LOCAL_SETUP.md).
+
+---
+
+## 🔥 Firebase Setup
+
+Sejora requires a Firebase project with:
+
+* Firebase Authentication enabled
+* Email/Password authentication enabled
+* Firestore enabled
+* Appropriate Firestore security rules
+* A Firebase Web App configured for the client
+* A Firebase service account configured for server-side Firebase Admin access
+
+The following values must refer to the same Firebase project:
+
+```text
+VITE_FIREBASE_PROJECT_ID
+FIREBASE_PROJECT_ID
+```
+
+For detailed Firebase configuration, see:
+
+```text
+FIREBASE_SETUP.md
+docs/AUTHENTICATION.md
+docs/ENVIRONMENT_VARIABLES.md
+docs/STANDALONE_LOCAL_SETUP.md
+```
+
+---
+
+## 🧪 Testing
+
+Run the test suite with:
 
 ```bash
-npm run typecheck
 npm test
-npm run build
 ```
 
-## Phase 5 analytics
+The project includes unit and integration tests covering areas such as:
 
-Dashboard data is available through the authenticated `GET /api/dashboard?month=YYYY-MM` endpoint. It derives the selected-month income, expenses, balance, savings rate, category spending, budget performance, and latest five transactions from the user's existing records.
+* Financial calculations
+* Authentication middleware
+* API behavior
+* Receipt processing
+* Forecast calculations
+* Budget calculations
+* Transaction behavior
+* Security-related request handling
 
-Analytics data is available through the authenticated `GET /api/analytics?from=YYYY-MM&to=YYYY-MM` endpoint. The range defaults to the latest six months when omitted and is limited to twelve months. Analytics are derived on the server and are not persisted as a second ledger or analytics collection.
+---
 
-Balance and savings use the selected period:
+## 📚 Documentation
+
+Additional technical documentation is available in the `docs/` directory.
+
+Important documents include:
 
 ```text
-balance = income - expenses
-savings = income - expenses
-savingsRate = savings / income * 100  (when income > 0)
+docs/
+├── API_REFERENCE.md
+├── ARCHITECTURE.md
+├── AUTHENTICATION.md
+├── DATABASE.md
+├── DEPLOYMENT.md
+├── ENVIRONMENT_VARIABLES.md
+├── FRONTEND_DEPLOYMENT.md
+├── LOCAL_DEVELOPMENT.md
+├── REPLIT_TO_INDEPENDENT_DEPLOYMENT.md
+├── STANDALONE_LOCAL_SETUP.md
+├── THIRD_PARTY_SERVICES.md
+└── TROUBLESHOOTING.md
 ```
 
-Amounts are stored as positive integer paise in `amountMinor`, and the transaction type determines whether they contribute to income or expenses.
+---
 
-## Phase 6 spending intelligence
+## 🔒 Security Principles
 
-Phase 6 adds two authenticated, read-only endpoints derived from the existing transaction ledger:
+Sejora follows several security principles:
 
-```text
-GET /api/insights?month=YYYY-MM
-GET /api/recurring-payments?from=YYYY-MM&to=YYYY-MM
-```
+* Server-side verification of Firebase ID tokens
+* User-scoped Firestore access
+* Server-only Gemini API access
+* Server-only Firebase Admin credentials
+* Input validation with Zod
+* Protected API routes
+* Environment-based secret management
+* No secrets committed to source control
+* Validation of AI-generated structured data
 
-Insights focus on one month. They include the largest expense category, largest individual expense, meaningful month-over-month category changes, spending concentration, and high-frequency expense categories. Category changes require at least two expense entries in both the focus and previous month, a 20% relative change, and a ₹500 absolute change.
+The frontend does not have access to Firebase Admin credentials or the Gemini API key.
 
-Unusual-spending flags are integrated into the Insights response. They require at least five historical expenses. Category-relative flags require at least three historical expenses in that category and compare against twice the category average with a minimum ₹500 gap. The overall fallback compares against three times the historical expense average with a minimum ₹1,000 gap. These are personal spending comparisons, not fraud detection.
+---
 
-Recurring-payment detection uses up to twelve selected months of expenses. A pattern requires at least three observations, a normalized merchant name, amounts within 15% of the median amount (with a minimum ₹1 tolerance), and consistent weekly (6–8 days), monthly (27–33 days), or quarterly (80–100 days) intervals. Results expose observations, typical amount, frequency, last occurrence, expected next occurrence, and a deterministic confidence percentage.
+## ⚠️ Limitations
 
-Phase 6 reads are UID-scoped, paginated, and capped at 10,000 transactions. No intelligence, anomaly, or recurring-payment records are persisted.
+Sejora currently does not:
 
-## Phase 7 financial health, goals, and upcoming cash flow
+* Connect directly to bank accounts
+* Execute real financial transactions
+* Process payments
+* Act as a bank
+* Provide regulated financial advice
+* Guarantee financial forecasts
+* Replace professional financial advice
 
-Phase 7 adds:
+Financial forecasts and AI-generated insights are intended for informational and educational purposes.
 
-```text
-GET    /api/goals
-POST   /api/goals
-GET    /api/goals/:id
-PATCH  /api/goals/:id
-DELETE /api/goals/:id
-GET    /api/financial-health?month=YYYY-MM
-GET    /api/cash-flow/upcoming?from=YYYY-MM-DD&to=YYYY-MM-DD
-```
+---
 
-Goals are stored under `users/{uid}/goals/{goalId}`. Target and current amounts are positive integer paise values, and the server derives remaining amount, percentage complete, and one of `not_started`, `in_progress`, `nearly_there`, `completed`, or `overdue`.
+## 🎯 Project Goals
 
-Financial Health is a deterministic, explainable score across savings, budget discipline, spending stability, recurring-cost pressure, and goal progress. The server returns an explicit insufficient-data state until there are at least three months of activity and at least 60% of supported scoring dimensions are available. It never stores or accepts a client-supplied score.
+Sejora was built to explore the intersection of:
 
-Upcoming Cash Flow is an expected view, not a forecast. It includes only detected recurring expenses with reliable next dates, uses a maximum 31-day window, reports expected income as zero when recurring income is not supported, and never creates future transaction records.
+* Full-stack web development
+* Financial data processing
+* Data visualization
+* Cloud databases
+* Authentication and authorization
+* Generative AI
+* Multimodal AI
+* Explainable financial calculations
+* Secure API design
 
-## Phase 8 receipt scanning
+The project focuses on using AI where it adds value while keeping important financial computations deterministic and testable.
 
-Receipt scanning uses the authenticated `POST /api/receipts/scan` endpoint. The server accepts only JPEG, PNG, and WebP images up to 5 MB, processes them in memory, and does not persist the uploaded image or add a receipt collection.
+---
 
-Gemini is called only from the backend using the `GEMINI_API_KEY` Replit Secret. It extracts structured receipt fields such as merchant, date, total, currency, type, category, payment method, and visible line items. Gemini output is untrusted: the server validates the response, normalizes rupee values into integer paise, marks missing or unsupported fields for review, and never calculates balances, budgets, analytics, health, or future cash flow.
+## 👩‍💻 Author
 
-The scanner UI always shows a review state. The user can edit extracted fields before the final confirmation is sent through the existing `/api/transactions` create path with `source: "receipt"`. Scanning alone never creates a transaction.
+### Sejal Thakur
 
-Automated tests mock the extractor and cover authentication, upload limits/signatures, missing credentials, provider failures, malformed structured responses, paise conversion, review-required fields, and the no-automatic-transaction boundary. Live Gemini behavior is not claimed as verified.
+B.Tech — Electronics & Communication Engineering
+Artificial Intelligence Specialization
 
-## Phase 9 forecasting and what-if simulations
+GitHub: **[@whilesejalcodes](https://github.com/whilesejalcodes)**
 
-Forecasting is deterministic and uses no Gemini, LLM, chat, recommendations, or new transaction types. The authenticated endpoints are:
+---
 
-```text
-GET  /api/forecast?horizon=1|3|6
-POST /api/forecast/simulate
-```
+## 📌 Project Status
 
-The forecast reads the authenticated user's transaction ledger and uses the last six completed calendar months, excluding the current partial month. All six months remain explicit in the response, including zero-activity months. Baseline income and expense projections use a simple arithmetic average of months with recorded activity; no missing history is fabricated. At least two active completed months are required for a projection. Fewer than four active months returns a visible limited-history state, while fewer than two returns an explicit insufficient-data state.
+Sejora is an actively developed portfolio project focused on building a full-stack personal finance platform with analytics, forecasting, financial intelligence, and responsible AI integration.
 
-The response includes actual cumulative recorded balance (income minus expenses through the as-of date), historical monthly income/expenses/net savings, projected monthly income/expenses/net savings, projected future balances, savings rates, data coverage, and assumptions. The “actual balance” is a calculated ledger balance, not a connected bank-account balance.
+---
 
-Simulations accept a 1-, 3-, or 6-month horizon, percentage adjustments to projected income and expenses, an optional one-time expense applied in the first projected month, and an optional monthly savings target. Simulation results are calculated in memory and never write transactions, budgets, goals, recurring payments, or forecast records. Automated coverage includes pure arithmetic, data sufficiency, authentication, validation, UID isolation, projection horizons, scenario differences, and the no-persistence boundary.
+## 📄 License
 
-## Phase 10 AI financial insights
-
-The existing deterministic `GET /api/insights?month=YYYY-MM` endpoint remains the source for factual spending observations and anomalies. Phase 10 adds an explicit, authenticated `POST /api/insights/ai?month=YYYY-MM` action for on-demand AI interpretation.
-
-The server first derives a structured context from existing calculations: current and comparison-period totals, recent active-month coverage, category spending, Phase 6 spending observations and anomalies, recurring patterns, and the Phase 9 forecast when sufficient data exists. It sends only aggregated facts to Gemini through the server-side `GEMINI_API_KEY`; it does not send Firebase credentials, authentication tokens, email addresses, or raw transaction records.
-
-Gemini is not the source of financial truth. It returns at most five structured insights containing a title, neutral summary, controlled type/severity, and IDs for supporting facts. The server validates the schema, rejects unknown fact IDs, rejects unsupported numerical claims, resolves every displayed supporting value from server-owned facts, and returns safe provider or validation errors. Insights are not persisted and generation is read-only.
-
-The Insights page keeps deterministic observations visible and adds an explicit Generate/Regenerate action, loading/error/insufficient-data states, AI disclosure, controlled insight cards, and server-derived supporting facts. Phase 10 does not add chat, natural-language finance questions, recommendations, or financial-product advice.
-
-## Phase 11 natural-language financial questions
-
-AI Finance is a dedicated authenticated, read-only Q&A page at `/ai-finance` backed by `POST /api/ai-finance/questions`. It supports deterministic questions about expense totals, category spending and share, top categories, largest expenses, income, savings and savings rate, month comparisons, merchant/description matches, budgets, goals, recurring payments, and forecast balance or expenses.
-
-Each question is independently processed. Common supported phrasing is mapped locally to a controlled intent so deterministic answers remain available without an unnecessary provider call. Other phrasing is sent to the server-only Gemini intent adapter. Gemini returns only a strict intent object; it never receives raw transaction history, never selects a UID, never executes tools, and never calculates the answer. The server validates the intent, resolves periods and categories, runs the existing UID-scoped services, and returns an authoritative result plus supporting facts.
-
-Period rules are deterministic: omitted periods use the current calendar month because that is Sejora's established default; “last month” means the previous calendar month; named months use the appropriate year relative to the application month; “this year” and “last year” use calendar years; and “last N months” includes the current month and the preceding N-1 calendar months. Forecast questions accept only 1, 3, or 6 months and reuse Phase 9 calculations.
-
-Unsupported advice requests, ambiguous questions, missing categories/goals, insufficient forecast history, provider failures, malformed intents, and invalid request bodies receive explicit safe states. There is no chat history, conversation memory, natural-language mutation command, or persistence created by Q&A. Financial numbers in the answer and supporting data are always produced by deterministic server calculations.
-
-## Phase 12 security hardening and testing
-
-Phase 12 preserves the existing backend-only Firestore architecture and hardens its boundaries:
-
-- Every private API requires a verified Firebase ID token and verified email; user identity always comes from the verified token, never request data.
-- Transaction, budget, goal, analytics, intelligence, forecast, receipt, AI Insights, and AI Finance data paths remain UID-scoped.
-- Direct client access to private Firestore collections is denied by `firestore.rules`; server requests use the Firebase Admin SDK and server-side Zod/business validation.
-- Calendar dates, integer paise amounts, enum values, IDs, request bodies, question lengths, forecast inputs, and uploads are bounded and validated.
-- Transaction updates validate the merged resulting record, preventing an expense from losing its required category.
-- Malformed JSON, oversized bodies, provider failures, upload failures, and unexpected errors return safe structured errors without stack traces or provider internals.
-- Receipt scanning remains in-memory, limited to JPEG/PNG/WebP images up to 5 MB, requires image signatures and bounded dimensions, and never creates a transaction before confirmation.
-- Receipt, AI Insights, and AI Finance provider routes have simple bounded request/concurrency guards; this is intentionally not a distributed rate-limiting system.
-- Gemini credentials remain server-only. Gemini output is strictly validated, provider errors are sanitized, and user-controlled text is treated as data rather than instructions.
-- Forecast, What-If, AI Insights, and AI Finance remain read-only; receipt scanning remains review-only until the user confirms a transaction.
-
-Phase 12 also adds regression coverage for authentication, UID isolation, invalid calendar dates, malformed JSON, merged transaction validation, upload dimensions, provider failures, rate guards, client network errors, and the existing no-write guarantees. No Firestore emulator is configured, so rules-level emulator testing is not available.
-
-## Configuration
-
-Copy `.env.example` to `.env` only when configuring a future phase. Phase 1 does not require Firebase or Gemini credentials.
+This project is currently intended for educational and portfolio purposes.
